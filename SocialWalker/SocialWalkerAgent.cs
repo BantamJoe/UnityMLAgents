@@ -8,10 +8,20 @@ public class SocialWalkerAgent : Agent {
 
     private Vector3 startPos;
     private Vector3 forward;
+    private float forwardSpeed;
+    private float rotSpeed;
+    private float forwardAcc;
+    private float rotAcc;
+
+    private float maxForwardSpeed = 0.5f;
+    private float minForwardSpeed = -0.2f;
+    private float maxRotSpeed = 90.0f;
 
     private int history = 2;
 
     private int step;
+    private int episode;
+    private int numEpisodeToRepeat = 10;
 
     private float bound = 10f;
 
@@ -40,10 +50,15 @@ public class SocialWalkerAgent : Agent {
 
     void Start()
     {
-        Debug.Log("Input feature size " + (4 * history + 6));
+        Debug.Log("Input feature size " + (4 * history + 8));
         step = 0;
+        episode = 0;
         startPos = new Vector3(0f, 0f, 0f);
         forward = new Vector3(0f, 0f, 1f);
+        forwardSpeed = 0f;
+        forwardAcc = 0f;
+        rotSpeed = 0f;
+        rotAcc = 0f;
 
         pastPositions = new List<Vector3>();
         pastForwardDirections = new List<Vector3>();
@@ -85,16 +100,38 @@ public class SocialWalkerAgent : Agent {
 
         AddVectorObs(forward.x);
         AddVectorObs(forward.z);
+
+        AddVectorObs(forwardSpeed);
+        AddVectorObs(rotSpeed);
     }
 
     public override void AgentReset()
     {
         step = 0;
+        forwardSpeed = 0f;
+        forwardAcc = 0f;
+        rotSpeed = 0f;
+        rotAcc = 0f;
+
+        pastForwardDirections.Clear();
+        pastPositions.Clear();
+
+        forward = new Vector3(0f, 0f, 1f);
+
+        for (int i = 0; i < history; i++)
+        {
+            pastPositions.Add(startPos);
+            pastForwardDirections.Add(forward);
+        }
+
         gameObject.transform.position = startPos;
         gameObject.transform.rotation = Quaternion.identity;
-        forward = new Vector3(0f, 0f, 1f);
-        target.transform.position = new Vector3(Random.Range(1 - bound, bound - 1), 0.5f, Random.Range(1 - bound, bound - 1));
-        //target.transform.position = new Vector3(bound - 1, 0.5f, bound - 1);
+        
+        if(episode > numEpisodeToRepeat)
+        {
+            episode = 0;
+            target.transform.position = new Vector3(Random.Range(1 - bound, bound - 1), 0.5f, Random.Range(1 - bound, bound - 1));
+        } 
     }
 
     public override void AgentAction(float[] act, string textAction)
@@ -105,33 +142,54 @@ public class SocialWalkerAgent : Agent {
         // 1 -> turn left
         // 2 -> turn right
         if (brain.brainParameters.vectorActionSpaceType == SpaceType.continuous)
-        { 
+        {
             gameObject.transform.position += forward.normalized * Mathf.Clamp(act[0], 0f, 1f);
 
             float rotAngle = 90.0f * Mathf.Clamp(act[1], -1f, 1f); // opposite ends, reachable from [-90, 90] rotation 
 
             gameObject.transform.Rotate(0f, rotAngle, 0f);
             forward = Quaternion.AngleAxis(rotAngle, Vector3.up) * forward;
-            
+
         }
         else
         {
             int action = (int)act[0];
-            Debug.Log(action);
-            if (action == 0)
+            //Debug.Log(action);
+            if (action == 0) // accelerate forward
             {
-                gameObject.transform.position += forward.normalized * 0.2f;
+                forwardAcc += 0.01f;
             }
-            else if (action == 1)
+            if (action == 1) // accelerate backward
             {
-                gameObject.transform.Rotate(Vector3.up, 1f);
-                forward = Quaternion.AngleAxis(1f, Vector3.up) * forward;
+                forwardAcc -= 0.01f;
             }
-            else if (action == 2)
+            else if (action == 2) // accelerate rotation right
             {
-                gameObject.transform.Rotate(Vector3.up, -1f);
-                forward = Quaternion.AngleAxis(-1f, Vector3.up) * forward;
+                rotAcc += 0.01f;
             }
+            else if (action == 3) // accelerate rotation left
+            {
+                rotAcc -= 0.01f;
+            }
+            else if (action == 4)
+            {
+                // do nothing
+            }
+            if (action == 0 || action == 1)
+            {
+                forwardSpeed += forwardAcc;
+            }
+            if (action == 2 || action == 3)
+            {
+                rotSpeed += rotAcc;
+            }
+
+            forwardSpeed = Mathf.Clamp(forwardSpeed, minForwardSpeed, maxForwardSpeed);
+            rotSpeed = Mathf.Clamp(rotSpeed, -maxRotSpeed, maxRotSpeed);
+
+            gameObject.transform.position += forward.normalized * forwardSpeed;
+            gameObject.transform.Rotate(Vector3.up, rotSpeed);
+            forward = Quaternion.AngleAxis(rotSpeed, Vector3.up) * forward;
         }
 
         pastForwardDirections.RemoveAt(0);
@@ -148,20 +206,17 @@ public class SocialWalkerAgent : Agent {
 
         if (distCurr < 1.0f)
         {
-            //Debug.Log("Reached Target!");
+            Debug.Log("Reached Target!");
             AddReward(1.0f);
+            episode++;
             Done();
         }
-        else if (distGained > 0)
-        {
-            AddReward(distGained);
-        }
-
-        if (gameObject.transform.position.x < -bound || gameObject.transform.position.x > bound ||
+        else if (gameObject.transform.position.x < -bound || gameObject.transform.position.x > bound ||
             gameObject.transform.position.z < -bound || gameObject.transform.position.z > bound)
         {
             //Debug.Log("Went out of Arena!");
             AddReward(-0.5f);
+            episode++;
             Done();
 
             //Vector3 tmp = gameObject.transform.position;
@@ -184,6 +239,10 @@ public class SocialWalkerAgent : Agent {
             //}
 
             //gameObject.transform.position = tmp;
+        }
+        else if (distGained > 0)
+        {
+            AddReward(distGained);
         }
 
         AddReward(-0.01f);
