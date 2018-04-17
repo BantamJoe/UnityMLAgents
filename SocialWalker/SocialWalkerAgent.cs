@@ -53,7 +53,8 @@ public class SocialWalkerAgent : Agent {
         Debug.Log("Input feature size " + (4 * history + 8));
         step = 0;
         episode = 0;
-        startPos = new Vector3(0f, 0f, 0f);
+        //startPos = new Vector3(0f, 0f, 0f);
+        startPos = transform.position;
         forward = new Vector3(0f, 0f, 1f);
         forwardSpeed = 0f;
         forwardAcc = 0f;
