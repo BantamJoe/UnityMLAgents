@@ -30,11 +30,16 @@ public class SocialWalkerAgent : Agent {
         AddVectorObs(agent_.target.x);
         AddVectorObs(agent_.target.z);
 
+        Debug.Log("I am Agent " + sw_id);
+
         AddVectorObs(agent_.pos.x);
 		AddVectorObs(agent_.pos.z);
 
         AddVectorObs(agent_.vel.x);
 		AddVectorObs(agent_.vel.z);
+
+        Debug.Log("My Position " + agent_.pos.x + " " + agent_.pos.z);
+        Debug.Log("My Velocity " + agent_.vel.x + " " + agent_.vel.z);
 
         for(int i = 0; i < crowd_.numAgents_; i++){
             if(i == sw_id){
@@ -44,6 +49,11 @@ public class SocialWalkerAgent : Agent {
     		AddVectorObs(crowd_.getAgent(i).pos.z);
             AddVectorObs(crowd_.getAgent(i).vel.x);
     		AddVectorObs(crowd_.getAgent(i).vel.z);
+
+            Debug.Log("I see agent " + i + " like this : ");
+            Debug.Log("Position " + crowd_.getAgent(i).pos.x + " " + crowd_.getAgent(i).pos.z);
+            Debug.Log("Velocity " + crowd_.getAgent(i).vel.x + " " + crowd_.getAgent(i).vel.z);
+
         }
     }
 
@@ -111,13 +121,21 @@ public class SocialWalkerAgent : Agent {
         {
             //Debug.Log("Went out of Arena!");
             AddReward(-0.5f);
-            Done();    
-        } else if(crowd_.doesCollide(sw_id)){
+            Done();
+        } 
+        else if(crowd_.doesCollide(sw_id)){
+            Debug.Log("Collision!");
             AddReward(-0.5f);
         }
-                
-        AddReward(-0.01f);
-        
+
+        // Add a net zero reward if the forward direction is point towards the target
+        // else add a small negative reward
+        // A = tar - pos
+        // B = forward
+        // cos theta = A dot B / |A||B|
+
+        AddReward((agent_.cosineOrientation() - 1.0f) / 200.0f); // a reward between [-0.01, 0]
+
     }
 
 }

@@ -22,7 +22,7 @@ public struct SocialWalker
         forward = new Vector3(0f, 0f, 1f);
         target = target_;
         radius = 1.0f;
-        maxSpeed = 0.5f;
+        maxSpeed = 0.2f;
         minSpeed = 0.001f;
     }
 
@@ -90,11 +90,20 @@ public struct SocialWalker
     public bool isCollidingWith(SocialWalker sw)
     {
         Vector3 d = pos - sw.pos;
+        //Debug.Log("distance between agents " + d.magnitude);
         if(radius + sw.radius > d.magnitude)
         {
             return true;
         }
         return false;
+    }
+
+    // 1 if forward is exactly facing the target
+    // -1 if forward is facing exactly opposite the target
+    public float cosineOrientation(){
+        var A = target - pos;
+        var B = forward;
+        return Vector3.Dot(A, B) / (A.magnitude * B.magnitude);
     }
 }
 
@@ -106,7 +115,7 @@ public class SocialWalkerCrowd : MonoBehaviour
     public int numAgents_;
     private int numAgentsTmp_;
     private List<SocialWalker> agents_;
-    private float bound = 10f;
+    private float bound_ = 10f;
 
     void Start()
     {
@@ -132,8 +141,8 @@ public class SocialWalkerCrowd : MonoBehaviour
             Color newColor = Color.HSVToRGB(hue, 1f, 1f);
             Color newColorDark = Color.HSVToRGB(hue, 1f, 0.5f);
 
-            Vector3 pos = new Vector3(Random.Range(1 - bound, bound - 1), 0.5f, Random.Range(1 - bound, bound - 1));
-            Vector3 tar = new Vector3(Random.Range(1 - bound, bound - 1), 0.5f, Random.Range(1 - bound, bound - 1));
+            Vector3 pos = new Vector3(Random.Range(1 - bound_, bound_ - 1), 0.5f, Random.Range(1 - bound_, bound_ - 1));
+            Vector3 tar = new Vector3(Random.Range(1 - bound_, bound_ - 1), 0.5f, Random.Range(1 - bound_, bound_ - 1));
 
             SocialWalker S = new SocialWalker();
             S.init(pos, tar);
@@ -170,5 +179,4 @@ public class SocialWalkerCrowd : MonoBehaviour
         }
         return false;
     }
-
 }
