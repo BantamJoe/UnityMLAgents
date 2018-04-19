@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class SocialWalkerAgent : Agent {
     public int sw_id;
-    public SocialWalker agent_;
+    private SocialWalker agent_;
+    private SocialWalker neighbor_;
+    private SocialWalkerCrowd cr_;
     public GameObject target_;
-    private SocialWalkerCrowd crowd_;
 
     private Vector3 minBound = new Vector3(-10f, 0f, -10f);
     private Vector3 maxBound = new Vector3(10f, 0f, 10f);
@@ -20,8 +21,8 @@ public class SocialWalkerAgent : Agent {
     void Start()
     {
         step = 0;
-        var go = GameObject.Find("Crowd");
-        crowd_ = go.GetComponent<SocialWalkerCrowd>();
+        cr_ = GameObject.Find("Crowd").GetComponent<SocialWalkerCrowd>();
+        cr_.getAgent(ref agent_, sw_id);
     }
 
     public override void CollectObservations()
@@ -30,30 +31,23 @@ public class SocialWalkerAgent : Agent {
         AddVectorObs(agent_.target.x);
         AddVectorObs(agent_.target.z);
 
-        Debug.Log("I am Agent " + sw_id);
-
         AddVectorObs(agent_.pos.x);
 		AddVectorObs(agent_.pos.z);
 
         AddVectorObs(agent_.vel.x);
 		AddVectorObs(agent_.vel.z);
 
-        Debug.Log("My Position " + agent_.pos.x + " " + agent_.pos.z);
-        Debug.Log("My Velocity " + agent_.vel.x + " " + agent_.vel.z);
-
-        for(int i = 0; i < crowd_.numAgents_; i++){
+        for(int i = 0; i < cr_.numAgents_; i++){
             if(i == sw_id){
                 continue;
             }
-            AddVectorObs(crowd_.getAgent(i).pos.x);
-    		AddVectorObs(crowd_.getAgent(i).pos.z);
-            AddVectorObs(crowd_.getAgent(i).vel.x);
-    		AddVectorObs(crowd_.getAgent(i).vel.z);
+            
+            cr_.getAgent(ref neighbor_, i);
 
-            Debug.Log("I see agent " + i + " like this : ");
-            Debug.Log("Position " + crowd_.getAgent(i).pos.x + " " + crowd_.getAgent(i).pos.z);
-            Debug.Log("Velocity " + crowd_.getAgent(i).vel.x + " " + crowd_.getAgent(i).vel.z);
-
+            AddVectorObs(neighbor_.pos.x);
+    		AddVectorObs(neighbor_.pos.z);
+            AddVectorObs(neighbor_.vel.x);
+    		AddVectorObs(neighbor_.vel.z);
         }
     }
 
@@ -62,8 +56,10 @@ public class SocialWalkerAgent : Agent {
         step = 0;
         Vector3 pos = new Vector3(Random.Range(minBound.x, maxBound.x), 0.5f, Random.Range(minBound.z, maxBound.z));
         Vector3 tar = new Vector3(Random.Range(minBound.x, maxBound.x), 0.5f, Random.Range(minBound.z, maxBound.z));
-        target_.transform.position = tar;
         agent_.init(pos, tar);
+        cr_.setAgent(ref agent_, sw_id);
+        gameObject.transform.position = pos;
+        target_.transform.position = tar;
     }
 
     public override void AgentAction(float[] act, string textAction)
@@ -111,6 +107,8 @@ public class SocialWalkerAgent : Agent {
 
         }
 
+        cr_.setAgent(ref agent_, sw_id);
+
         if (agent_.targetReached())
         {
             Debug.Log("Reached Target!");
@@ -119,11 +117,11 @@ public class SocialWalkerAgent : Agent {
         }
         else if (!agent_.withinBounds(minBound, maxBound))
         {
-            //Debug.Log("Went out of Arena!");
+            Debug.Log("Went out of Arena!");
             AddReward(-0.5f);
             Done();
         } 
-        else if(crowd_.doesCollide(sw_id)){
+        else if(cr_.doesCollide(sw_id)){
             Debug.Log("Collision!");
             AddReward(-0.5f);
         }

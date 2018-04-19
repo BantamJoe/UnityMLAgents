@@ -115,11 +115,15 @@ public class SocialWalkerCrowd : MonoBehaviour
     public int numAgents_;
     private int numAgentsTmp_;
     private List<SocialWalker> agents_;
+    private List<GameObject> walkerAgents_;
+    private List<GameObject> targetAgents_;
     private float bound_ = 10f;
 
     void Start()
     {
         agents_ = new List<SocialWalker>();
+        walkerAgents_ = new List<GameObject>();
+        targetAgents_ = new List<GameObject>();
     }
 
     void Update()
@@ -135,6 +139,19 @@ public class SocialWalkerCrowd : MonoBehaviour
     void ResetAgents()
     {
         agents_.Clear();
+
+        foreach(var wa in walkerAgents_){
+            Destroy(wa);
+        }
+
+        walkerAgents_.Clear();
+
+        foreach(var tar in targetAgents_){
+            Destroy(tar);
+        }
+
+        targetAgents_.Clear();
+
         for(int i = 0; i < numAgents_; i++)
         {
             float hue = (float)i / numAgents_;
@@ -154,18 +171,24 @@ public class SocialWalkerCrowd : MonoBehaviour
             GameObject targetClone = Instantiate(targetPrefab_, tar, Quaternion.identity);
             targetClone.GetComponent<MeshRenderer>().material.color = newColorDark;
 
-            //Brain brainClone = Instantiate(socialWalkerBrain_.GetComponent<Brain>());
-            //walkerClone.GetComponent<SocialWalkerAgent>().brain = brainClone;
             walkerClone.GetComponent<SocialWalkerAgent>().GiveBrain(socialWalkerBrain_.GetComponent<Brain>());
-            walkerClone.GetComponent<SocialWalkerAgent>().agent_ = S;
-            walkerClone.GetComponent<SocialWalkerAgent>().target_ = targetClone;
             walkerClone.GetComponent<SocialWalkerAgent>().sw_id = i;
+            walkerClone.GetComponent<SocialWalkerAgent>().target_ = targetClone;
+
+            walkerAgents_.Add(walkerClone);
+            targetAgents_.Add(targetClone);
+
         }
     }
 
-    public SocialWalker getAgent(int id)
+    public void getAgent(ref SocialWalker agent, int id)
     {
-        return agents_[id];
+        agent = agents_[id];
+    }
+
+    public void setAgent(ref SocialWalker agent, int id)
+    {
+        agents_[id] = agent;
     }
 
     public bool doesCollide(int id){
