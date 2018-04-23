@@ -9,6 +9,19 @@ public class SocialWalkerAgent : Agent {
     private SocialWalkerCrowd cr_;
     public GameObject target_;
 
+    //parameters
+    const float rewardTargetReached = 1.0f;
+    const float rewardCollision = -0.5f;
+    const float rewardOutOfBounds = -0.5f; 
+    const float orientationWeight= 0.005f;
+    const float distanceGainedWeight = 0.2f;
+    const float rewardEachStep = -0.01f;
+
+    const int obsSpaceSize = 6;
+
+    const float agentFOV = 60.0f;
+    const float agentSensorLength = 10.0f;
+
     private Vector3 minBound = new Vector3(-10f, 0f, -10f);
     private Vector3 maxBound = new Vector3(10f, 0f, 10f);
 
@@ -28,26 +41,39 @@ public class SocialWalkerAgent : Agent {
     public override void CollectObservations()
     {
         // Agent only remains on the 2D XZ plane
-        AddVectorObs(agent_.target.x);
-        AddVectorObs(agent_.target.z);
+        // AddVectorObs(agent_.target.x);
+        // AddVectorObs(agent_.target.z);
 
-        AddVectorObs(agent_.pos.x);
-		AddVectorObs(agent_.pos.z);
+        //Debug.Log("I am Agent " + sw_id);
 
-        AddVectorObs(agent_.vel.x);
-		AddVectorObs(agent_.vel.z);
+        // AddVectorObs(agent_.pos.x);
+		// AddVectorObs(agent_.pos.z);
 
-        for(int i = 0; i < cr_.numAgents_; i++){
-            if(i == sw_id){
-                continue;
-            }
-            
-            cr_.getAgent(ref neighbor_, i);
+        // AddVectorObs(agent_.vel.x);
+		// AddVectorObs(agent_.vel.z);
 
-            AddVectorObs(neighbor_.pos.x);
-    		AddVectorObs(neighbor_.pos.z);
-            AddVectorObs(neighbor_.vel.x);
-    		AddVectorObs(neighbor_.vel.z);
+        // Debug.Log("My Position " + agent_.pos.x + " " + agent_.pos.z);
+        // Debug.Log("My Velocity " + agent_.vel.x + " " + agent_.vel.z);
+
+        // for(int i = 0; i < crowd_.numAgents_; i++){
+        //     if(i == sw_id){
+        //         continue;
+        //     }
+        //     AddVectorObs(crowd_.getAgent(i).pos.x);
+    	// 	AddVectorObs(crowd_.getAgent(i).pos.z);
+        //     AddVectorObs(crowd_.getAgent(i).vel.x);
+    	// 	AddVectorObs(crowd_.getAgent(i).vel.z);
+
+        //     Debug.Log("I see agent " + i + " like this : ");
+        //     Debug.Log("Position " + crowd_.getAgent(i).pos.x + " " + crowd_.getAgent(i).pos.z);
+        //     Debug.Log("Velocity " + crowd_.getAgent(i).vel.x + " " + crowd_.getAgent(i).vel.z);
+
+        // }
+
+        var sensorData = cr_.getSensors(sw_id, obsSpaceSize, agentFOV, agentSensorLength);
+        for(int i = 0; i < sensorData.Count; i++){
+            //Debug.Log("Sensor " + i + ":" + sensorData[i]);
+            AddVectorObs(sensorData[i]);
         }
     }
 
@@ -69,6 +95,9 @@ public class SocialWalkerAgent : Agent {
         // 0 -> move forward
         // 1 -> turn left
         // 2 -> turn right
+
+        float distToTargetOld = (target_.transform.position - agent_.pos).magnitude;
+
         if (brain.brainParameters.vectorActionSpaceType == SpaceType.continuous)
         {
             gameObject.transform.position += gameObject.transform.forward.normalized * Mathf.Clamp(act[0], 0f, 1f);
@@ -109,30 +138,35 @@ public class SocialWalkerAgent : Agent {
 
         cr_.setAgent(ref agent_, sw_id);
 
+        float distToTarget = (target_.transform.position - agent_.pos).magnitude;
+
         if (agent_.targetReached())
         {
-            Debug.Log("Reached Target!");
-            AddReward(1.0f);
+            //Debug.Log("Reached Target!");
+            AddReward(rewardTargetReached);
             Done();
+            return;
         }
-        else if (!agent_.withinBounds(minBound, maxBound))
+        
+        if (!agent_.withinBounds(minBound, maxBound))
         {
-            Debug.Log("Went out of Arena!");
-            AddReward(-0.5f);
+            //Debug.Log("Went out of Arena!");
+            AddReward(rewardOutOfBounds);
             Done();
-        } 
-        else if(cr_.doesCollide(sw_id)){
-            Debug.Log("Collision!");
-            AddReward(-0.5f);
+            return;
         }
 
-        // Add a net zero reward if the forward direction is point towards the target
-        // else add a small negative reward
-        // A = tar - pos
-        // B = forward
-        // cos theta = A dot B / |A||B|
+        if(cr_.doesCollide(sw_id)){
+            //Debug.Log("Collision!");
+            AddReward(rewardCollision);
+        }
 
-        AddReward((agent_.cosineOrientation() - 1.0f) / 200.0f); // a reward between [-0.01, 0]
+        //reward for gaining distance towards the target
+        AddReward(distanceGainedWeight * (distToTargetOld - distToTarget));
+        //reward for orienting towards the target
+        AddReward(orientationWeight * agent_.cosineOrientation()); // a reward between [-0.005, 0.005]
+        //reward for each step (usually negative)
+        AddReward(rewardEachStep);
 
     }
 

@@ -10,6 +10,7 @@ public struct SocialWalker
     public Vector3 forward;
     public Vector3 target;
     public float radius;
+    public float targetRadius;
 
     float maxSpeed;
     float minSpeed;
@@ -22,6 +23,7 @@ public struct SocialWalker
         forward = new Vector3(0f, 0f, 1f);
         target = target_;
         radius = 1.0f;
+        targetRadius = 1.0f;
         maxSpeed = 0.2f;
         minSpeed = 0.001f;
     }
@@ -74,7 +76,7 @@ public struct SocialWalker
 
     public bool targetReached(){
         Vector3 d = target - pos;
-        if(d.magnitude < 1.0f){
+        if(d.magnitude < targetRadius){
             return true;
         }
         return false;
@@ -202,4 +204,65 @@ public class SocialWalkerCrowd : MonoBehaviour
         }
         return false;
     }
+
+    public List<float> getSensors(int id, int numSensors, float FOVDegrees, float sensorLength){
+
+        List<float> ret = new List<float>();
+        Vector3 forward = agents_[id].forward;
+        float targetDist = 20000.0f;
+        float obstacleDist = 20000.0f;
+
+        //Debug.Log(ret.Count + " " + numSensors);
+
+        for(int i = 0; i < numSensors; i++){
+            float value = 0.0f;
+            float angle = i * FOVDegrees / (numSensors - 1) - FOVDegrees/2;
+            Vector3 rayDir =  Quaternion.AngleAxis(angle, Vector3.up) * forward;
+
+            //check if ray intersects target
+            targetDist = intersectRaySphere(agents_[id].pos, rayDir, agents_[id].target, agents_[id].targetRadius);
+
+            for(int j = 0; j < numAgents_; j++){
+                if(j == id){
+                    continue;
+                }
+                // check if ray intersects another agent
+                // own radius used, as agent self-determines how far they should be
+                obstacleDist = Mathf.Min(obstacleDist, intersectRaySphere(agents_[id].pos, rayDir, agents_[j].pos, agents_[id].radius)); 
+            }
+
+            if(targetDist < obstacleDist){
+                value = sensorLength / (targetDist + 1);
+            } else if (obstacleDist < targetDist){
+                value = -sensorLength / (1 + obstacleDist); // encountering obstacles contributes to a negative sensor value
+            } else {
+                value = 0.0f;
+            }
+            ret.Add(value);
+        }
+
+        return ret;
+    }
+
+    public float intersectRaySphere(Vector3 origin, Vector3 direction, Vector3 center, float radius){
+        float lambda = 20000.0f;
+        // solving for ax^2 + bx + c = 0
+        float a = direction.sqrMagnitude;
+        float b = -2.0f * Vector3.Dot(center - origin, direction);
+        float c = (center - origin).sqrMagnitude - radius * radius;
+
+        float discr = b*b - 4*a*c;
+        if(discr > 0){
+            lambda = (-b - Mathf.Sqrt(discr)) / (2*a);
+            if(lambda < 0){
+                lambda = (-b + Mathf.Sqrt(discr)) / (2*a);
+                if(lambda < 0){
+                   return 20000.0f;
+                }
+            }
+        }
+
+        return lambda;
+    }
+
 }
