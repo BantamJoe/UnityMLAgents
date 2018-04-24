@@ -20,12 +20,10 @@ public class SocialWalkerAgent : Agent {
     const int obsSpaceSize = 6;
 
     const float agentFOV = 60.0f;
-    const float agentSensorLength = 10.0f;
-
-    private Vector3 minBound = new Vector3(-10f, 0f, -10f);
-    private Vector3 maxBound = new Vector3(10f, 0f, 10f);
+    const float agentSensorLength = 20.0f;
 
     private int step;
+    private bool agentDone = false;
 
     void Awake(){
 
@@ -80,8 +78,8 @@ public class SocialWalkerAgent : Agent {
     public override void AgentReset()
     {
         step = 0;
-        Vector3 pos = new Vector3(Random.Range(minBound.x, maxBound.x), 0.5f, Random.Range(minBound.z, maxBound.z));
-        Vector3 tar = new Vector3(Random.Range(minBound.x, maxBound.x), 0.5f, Random.Range(minBound.z, maxBound.z));
+        Vector3 pos = new Vector3(Random.Range(cr_.minBound_.x, cr_.maxBound_.x), 0.5f, Random.Range(cr_.minBound_.z, cr_.maxBound_.z));
+        Vector3 tar = new Vector3(Random.Range(cr_.minBound_.x, cr_.maxBound_.x), 0.5f, Random.Range(cr_.minBound_.z, cr_.maxBound_.z));
         agent_.init(pos, tar);
         cr_.setAgent(ref agent_, sw_id);
         gameObject.transform.position = pos;
@@ -90,6 +88,16 @@ public class SocialWalkerAgent : Agent {
 
     public override void AgentAction(float[] act, string textAction)
     {
+        if(agentDone){
+            if(!cr_.allDone_){
+                return;
+            } else {
+                agentDone = false;
+                cr_.setAgentActiveStatus(sw_id, true);
+                return;
+                //Done();
+            }
+        } 
         //Debug.Log("Actions act[0] " + act[0] + "act[1] " + act[1]);
         step++;
         // 0 -> move forward
@@ -142,22 +150,22 @@ public class SocialWalkerAgent : Agent {
 
         if (agent_.targetReached())
         {
-            //Debug.Log("Reached Target!");
+            //Debug.Log("Reached Target! Agent Done.");
             AddReward(rewardTargetReached);
-            Done();
+            AgentDoneStuff();            
             return;
         }
         
-        if (!agent_.withinBounds(minBound, maxBound))
+        if (!agent_.withinBounds(cr_.minBound_, cr_.maxBound_))
         {
-            //Debug.Log("Went out of Arena!");
+            //Debug.Log("Went out of Arena! Agent Done.");
             AddReward(rewardOutOfBounds);
-            Done();
+            AgentDoneStuff();
             return;
         }
 
         if(cr_.doesCollide(sw_id)){
-            //Debug.Log("Collision!");
+            Debug.Log("Collision!");
             AddReward(rewardCollision);
         }
 
@@ -168,6 +176,14 @@ public class SocialWalkerAgent : Agent {
         //reward for each step (usually negative)
         AddReward(rewardEachStep);
 
+    }
+
+    void AgentDoneStuff(){
+        Done();
+        gameObject.SetActive(false);
+        target_.SetActive(false);
+        cr_.setAgentActiveStatus(sw_id, false);
+        agentDone = true;
     }
 
 }

@@ -117,13 +117,18 @@ public class SocialWalkerCrowd : MonoBehaviour
     public int numAgents_;
     private int numAgentsTmp_;
     private List<SocialWalker> agents_;
+    private List<bool> agentActive_;
     private List<GameObject> walkerAgents_;
     private List<GameObject> targetAgents_;
-    private float bound_ = 10f;
+    public Vector3 minBound_ = new Vector3(-10f, 0f, -10f);
+    public Vector3 maxBound_ = new Vector3(10f, 0f, 10f);
+    public bool allDone_;
 
     void Start()
     {
+        allDone_ = false;
         agents_ = new List<SocialWalker>();
+        agentActive_ = new List<bool>();
         walkerAgents_ = new List<GameObject>();
         targetAgents_ = new List<GameObject>();
     }
@@ -160,8 +165,8 @@ public class SocialWalkerCrowd : MonoBehaviour
             Color newColor = Color.HSVToRGB(hue, 1f, 1f);
             Color newColorDark = Color.HSVToRGB(hue, 1f, 0.5f);
 
-            Vector3 pos = new Vector3(Random.Range(1 - bound_, bound_ - 1), 0.5f, Random.Range(1 - bound_, bound_ - 1));
-            Vector3 tar = new Vector3(Random.Range(1 - bound_, bound_ - 1), 0.5f, Random.Range(1 - bound_, bound_ - 1));
+            Vector3 pos = new Vector3(Random.Range(minBound_.x, maxBound_.x), 0.5f, Random.Range(minBound_.z, maxBound_.z));
+            Vector3 tar = new Vector3(Random.Range(minBound_.x, maxBound_.x), 0.5f, Random.Range(minBound_.z, maxBound_.z));
 
             SocialWalker S = new SocialWalker();
             S.init(pos, tar);
@@ -179,6 +184,7 @@ public class SocialWalkerCrowd : MonoBehaviour
 
             walkerAgents_.Add(walkerClone);
             targetAgents_.Add(targetClone);
+            agentActive_.Add(true);
 
         }
     }
@@ -193,9 +199,36 @@ public class SocialWalkerCrowd : MonoBehaviour
         agents_[id] = agent;
     }
 
+    public void setAgentActiveStatus(int id, bool status){
+        //Debug.Log("Status updated called by " + id + " with " + status);
+        agentActive_[id] = status;
+        int numDone = 0;
+        for(int i = 0; i < numAgents_; i++){
+            if(!agentActive_[i]){
+                numDone++;
+            }
+        }
+        //Debug.Log("Num Done " + numDone);
+        if(allDone_ && numDone == 0){
+            //Debug.Log("All Done set to FALSE");
+            allDone_ = false;
+        }
+        if(!allDone_ && numDone == numAgents_){
+            //Debug.Log("All Done set to TRUE");
+            allDone_ = true;
+            for(int i = 0; i < numAgents_; i++){
+                 walkerAgents_[i].SetActive(true);
+                 targetAgents_[i].SetActive(true);
+            }
+        }
+    }
+
     public bool doesCollide(int id){
         for(int i = 0; i < numAgents_; i++){
             if(i == id){
+                continue;
+            }
+            if(!agentActive_[i]){
                 continue;
             }
             if(agents_[id].isCollidingWith(agents_[i])){
@@ -226,10 +259,24 @@ public class SocialWalkerCrowd : MonoBehaviour
                 if(j == id){
                     continue;
                 }
+                if(!agentActive_[j]){
+                    continue;
+                }
                 // check if ray intersects another agent
                 // own radius used, as agent self-determines how far they should be
                 obstacleDist = Mathf.Min(obstacleDist, intersectRaySphere(agents_[id].pos, rayDir, agents_[j].pos, agents_[id].radius)); 
             }
+
+            //check if colliding with 
+            obstacleDist = Mathf.Min(obstacleDist, intersectRayLineSegment(agents_[id].pos, rayDir, 
+                    minBound_, new Vector3(minBound_.x, 0, maxBound_.z))); 
+            obstacleDist = Mathf.Min(obstacleDist, intersectRayLineSegment(agents_[id].pos, rayDir, 
+                    minBound_, new Vector3(maxBound_.x, 0, minBound_.z)));
+            obstacleDist = Mathf.Min(obstacleDist, intersectRayLineSegment(agents_[id].pos, rayDir, 
+                    maxBound_, new Vector3(minBound_.x, 0, maxBound_.z))); 
+            obstacleDist = Mathf.Min(obstacleDist, intersectRayLineSegment(agents_[id].pos, rayDir, 
+                    maxBound_, new Vector3(maxBound_.x, 0, minBound_.z)));
+                     
 
             if(targetDist < obstacleDist){
                 value = sensorLength / (targetDist + 1);
@@ -262,6 +309,23 @@ public class SocialWalkerCrowd : MonoBehaviour
             }
         }
 
+        return lambda;
+    }
+
+    public float intersectRayLineSegment(Vector3 origin, Vector3 direction, Vector3 p1, Vector3 p2){
+        float lambda = 20000.0f;
+        float dir1 = Vector3.Dot(Vector3.up, Vector3.Cross(p1 - origin, direction));
+        float dir2 = Vector3.Dot(Vector3.up, Vector3.Cross(p2 - origin, direction));
+        
+        if(dir1 < 0.000001f){
+            lambda = (p1 - origin).magnitude;
+        }
+        if(dir2 < 0.000001f){
+            lambda = (p2 - origin).magnitude;
+        }
+        if(dir1 * dir2 < 0){
+            return (Vector3.Lerp(p1, p2, Mathf.Abs(dir1) / (Mathf.Abs(dir1) + Mathf.Abs(dir2))) - origin).magnitude;
+        }
         return lambda;
     }
 
