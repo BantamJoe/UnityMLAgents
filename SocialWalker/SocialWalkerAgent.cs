@@ -11,16 +11,14 @@ public class SocialWalkerAgent : Agent {
 
     //parameters
     const float rewardTargetReached = 1.0f;
-    const float rewardCollision = -0.5f;
-    const float rewardOutOfBounds = -0.5f; 
-    const float orientationWeight= 0.005f;
-    const float distanceGainedWeight = 0.2f;
+    const float rewardCollision = -1.0f;
+    const float rewardOutOfBounds = -1.0f; 
+    const float orientationGainedWeight= 0.02f;
+    const float distanceGainedWeight = 0.05f;
     const float rewardEachStep = -0.01f;
-
-    const int obsSpaceSize = 6;
-
+    const int obsSpaceSize = 10;
     const float agentFOV = 60.0f;
-    const float agentSensorLength = 20.0f;
+    const float agentSensorLength = 30.0f;
 
     private int step;
     private bool agentDone = false;
@@ -68,10 +66,15 @@ public class SocialWalkerAgent : Agent {
 
         // }
 
-        var sensorData = cr_.getSensors(sw_id, obsSpaceSize, agentFOV, agentSensorLength);
-        for(int i = 0; i < sensorData.Count; i++){
+        var sensorDataTar = cr_.getSensorsTarget(sw_id, obsSpaceSize, agentFOV, agentSensorLength);
+        var sensorDataObs = cr_.getSensorsObstacle(sw_id, obsSpaceSize, agentFOV, agentSensorLength);
+        for(int i = 0; i < sensorDataTar.Count; i++){
             //Debug.Log("Sensor " + i + ":" + sensorData[i]);
-            AddVectorObs(sensorData[i]);
+            AddVectorObs(sensorDataTar[i]);
+        }
+        for(int i = 0; i < sensorDataObs.Count; i++){
+            //Debug.Log("Sensor " + i + ":" + sensorData[i]);
+            AddVectorObs(sensorDataObs[i]);
         }
     }
 
@@ -105,6 +108,7 @@ public class SocialWalkerAgent : Agent {
         // 2 -> turn right
 
         float distToTargetOld = (target_.transform.position - agent_.pos).magnitude;
+        float orientationOld = agent_.cosineOrientation();
 
         if (brain.brainParameters.vectorActionSpaceType == SpaceType.continuous)
         {
@@ -147,6 +151,7 @@ public class SocialWalkerAgent : Agent {
         cr_.setAgent(ref agent_, sw_id);
 
         float distToTarget = (target_.transform.position - agent_.pos).magnitude;
+        float orientation = agent_.cosineOrientation();
 
         if (agent_.targetReached())
         {
@@ -170,9 +175,9 @@ public class SocialWalkerAgent : Agent {
         }
 
         //reward for gaining distance towards the target
-        AddReward(distanceGainedWeight * (distToTargetOld - distToTarget));
+        AddReward(distanceGainedWeight * (distToTargetOld - distToTarget)); // should have come closer to target
         //reward for orienting towards the target
-        AddReward(orientationWeight * agent_.cosineOrientation()); // a reward between [-0.005, 0.005]
+        AddReward(orientationGainedWeight * (orientation - orientationOld)); // should have aligned better with target
         //reward for each step (usually negative)
         AddReward(rewardEachStep);
 

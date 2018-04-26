@@ -238,11 +238,35 @@ public class SocialWalkerCrowd : MonoBehaviour
         return false;
     }
 
-    public List<float> getSensors(int id, int numSensors, float FOVDegrees, float sensorLength){
+    public List<float> getSensorsTarget(int id, int numSensors, float FOVDegrees, float sensorLength){
 
         List<float> ret = new List<float>();
         Vector3 forward = agents_[id].forward;
         float targetDist = 20000.0f;
+        
+        for(int i = 0; i < numSensors; i++){
+            float value = 0.0f;
+            float angle = i * FOVDegrees / (numSensors - 1) - FOVDegrees/2;
+            Vector3 rayDir =  Quaternion.AngleAxis(angle, Vector3.up) * forward;
+
+            //check if ray intersects target
+            targetDist = Mathf.Min(targetDist, intersectRaySphere(agents_[id].pos, rayDir, agents_[id].target, agents_[id].targetRadius));
+
+            if(targetDist < 20000.0f){
+                value = sensorLength / (targetDist + 1);
+            }
+            
+            ret.Add(value);
+        }
+
+        return ret;
+    }
+
+    public List<float> getSensorsObstacle(int id, int numSensors, float FOVDegrees, float sensorLength){
+
+        List<float> ret = new List<float>();
+        Vector3 forward = agents_[id].forward;
+        
         float obstacleDist = 20000.0f;
 
         //Debug.Log(ret.Count + " " + numSensors);
@@ -251,9 +275,6 @@ public class SocialWalkerCrowd : MonoBehaviour
             float value = 0.0f;
             float angle = i * FOVDegrees / (numSensors - 1) - FOVDegrees/2;
             Vector3 rayDir =  Quaternion.AngleAxis(angle, Vector3.up) * forward;
-
-            //check if ray intersects target
-            targetDist = intersectRaySphere(agents_[id].pos, rayDir, agents_[id].target, agents_[id].targetRadius);
 
             for(int j = 0; j < numAgents_; j++){
                 if(j == id){
@@ -277,14 +298,10 @@ public class SocialWalkerCrowd : MonoBehaviour
             obstacleDist = Mathf.Min(obstacleDist, intersectRayLineSegment(agents_[id].pos, rayDir, 
                     maxBound_, new Vector3(maxBound_.x, 0, minBound_.z)));
                      
-
-            if(targetDist < obstacleDist){
-                value = sensorLength / (targetDist + 1);
-            } else if (obstacleDist < targetDist){
-                value = -sensorLength / (1 + obstacleDist); // encountering obstacles contributes to a negative sensor value
-            } else {
-                value = 0.0f;
+            if(value < 20000.0f){
+                value = sensorLength / (1 + obstacleDist); 
             }
+            
             ret.Add(value);
         }
 
