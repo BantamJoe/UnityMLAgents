@@ -154,15 +154,15 @@ BasicBrain:
     summary_freq: 2000
     time_horizon: 3
 
-StudentBrain:
+SWStudent:
     trainer: imitation
-    max_steps: 100000
+    max_steps: 50000
     summary_freq: 1000
-    brain_to_imitate: TeacherBrain
+    brain_to_imitate: SWTeacher
     batch_size: 16
     batches_per_epoch: 5
     num_layers: 2
     hidden_units: 64
-    use_recurrent: false
-    sequence_length: 64
+    use_recurrent: true
+    sequence_length: 16
     buffer_size: 128

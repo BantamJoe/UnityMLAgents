@@ -19,6 +19,7 @@ public class SWAgent : Agent {
     const int obsSpaceSize = 10;
     const float agentFOV = 60.0f;
     const float agentSensorLength = 30.0f;
+    const int maxSteps = 1000;
 
     private int step;
     private bool agentDone = false;
@@ -38,12 +39,20 @@ public class SWAgent : Agent {
     {
         // Agent only remains on the 2D XZ plane
 
-        var sensorDataTar = cr_.getSensorsTarget(sw_id, obsSpaceSize, agentFOV, agentSensorLength);
+        // since target direction is always assumed to be known in the general case
+        // we also need to sample more
+        //var sensorDataTar = cr_.getSensorsTarget(sw_id, 16, 360, agentSensorLength);
+
+        float signedAngle = Vector3.SignedAngle(agent_.forward, agent_.target - agent_.pos, Vector3.up);
+        AddVectorObs(1.0f / (agent_.target - agent_.pos).sqrMagnitude);
+        AddVectorObs(agent_.cosineOrientation());
+        AddVectorObs(signedAngle > 0.0f ? 1.0f : 0.0f);
+        
         var sensorDataObs = cr_.getSensorsObstacle(sw_id, obsSpaceSize, agentFOV, agentSensorLength);
-        for(int i = 0; i < sensorDataTar.Count; i++){
-            //Debug.Log("Sensor " + i + ":" + sensorData[i]);
-            AddVectorObs(sensorDataTar[i]);
-        }
+        // for(int i = 0; i < sensorDataTar.Count; i++){
+        //     //Debug.Log("Sensor " + i + ":" + sensorData[i]);
+        //     AddVectorObs(sensorDataTar[i]);
+        // }
         for(int i = 0; i < sensorDataObs.Count; i++){
             //Debug.Log("Sensor " + i + ":" + sensorData[i]);
             AddVectorObs(sensorDataObs[i]);
@@ -100,7 +109,7 @@ public class SWAgent : Agent {
             }
             if (action == 1) // accelerate backward
             {
-                agent_.accelerateForward(-0.005f);
+                agent_.accelerateForward(-0.001f);
             }
             else if (action == 2) // accelerate right
             {
@@ -133,7 +142,7 @@ public class SWAgent : Agent {
             return;
         }
         
-        if (!agent_.withinBounds(cr_.minBound_, cr_.maxBound_) || step > 1000)
+        if (!agent_.withinBounds(cr_.areaMinBound_, cr_.areaMaxBound_) || step > maxSteps)
         {
             //Debug.Log("Went out of Arena! Agent Done.");
             AddReward(rewardOutOfBounds);
