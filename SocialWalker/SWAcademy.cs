@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SWImitationAcademy : Academy {
+public class SWAcademy : Academy {
 
     public override void AcademyReset()
     {
