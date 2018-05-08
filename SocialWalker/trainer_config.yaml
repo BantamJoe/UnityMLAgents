@@ -18,11 +18,11 @@ default:
     summary_freq: 1000
     use_recurrent: false
 
-SocialWalkerBrain:
+SocialWalker:
   use_recurrent: true
   sequence_length: 32
   normalize: true
-  max_steps: 1.0e7
+  max_steps: 1.0e5
   hidden_units: 64
   learning_rate: 3.0e-4
 
@@ -166,3 +166,17 @@ SWStudent:
     use_recurrent: true
     sequence_length: 16
     buffer_size: 128
+
+SW1Teacher:
+  max_steps: 5e6
+  num_layers: 2
+  hidden_units: 64
+  use_recurrent: true
+  sequence_length: 16
+
+SW1Student:
+  max_steps: 5e6
+  num_layers: 2
+  hidden_units: 64
+  use_recurrent: true
+  sequence_length: 16
