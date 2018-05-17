@@ -6,6 +6,7 @@ using UnityEngine.UI;
 public class SWCrowd : MonoBehaviour
 {
     public bool imitationLearning;
+    public bool showInfo;
     public GameObject SocialWalkerBrain_;
     public GameObject TeacherBrain_;
     public GameObject StudentBrain_;
@@ -33,7 +34,9 @@ public class SWCrowd : MonoBehaviour
         agentActive_ = new List<bool>();
         walkerAgents_ = new List<GameObject>();
         targetAgents_ = new List<GameObject>();
-        InvokeRepeating("UpdateInfo", 2.0f, 0.5f);
+        if(showInfo){
+            InvokeRepeating("UpdateInfo", 2.0f, 0.5f);
+        }
     }
 
     void Update()

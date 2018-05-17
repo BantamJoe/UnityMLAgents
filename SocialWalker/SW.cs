@@ -4,73 +4,65 @@ using UnityEngine;
 public struct SW
 {
     public Vector3 pos;
-    public Vector3 vel;
-    public Vector3 acc;
     public Vector3 forward;
     public Vector3 target;
+    public float speed;
+    public float acc;
     public float radius;
     public float targetRadius;
-
-    float maxSpeed;
-    float minSpeed;
-
+    const float maxSpeed = 0.1f;
     public void init(Vector3 x_, Vector3 target_)
     {
         pos = x_;
-        vel = new Vector3(0f, 0f, 0f);
-        acc = new Vector3(0f, 0f, 0f);
         forward = new Vector3(0f, 0f, 1f);
         target = target_;
+        speed = 0.0f;
+        acc = 0.0f;
         radius = 1.0f;
-        targetRadius = 1.0f;
-        maxSpeed = 0.2f;
-        minSpeed = 0.001f;
-    }
-
-    private void restrictSpeed(){
-        if(vel.magnitude > maxSpeed){
-            vel = vel.normalized * maxSpeed;
-        }
-        if(vel.magnitude < minSpeed){
-            vel = vel.normalized * minSpeed;
-        }
+        targetRadius = 0.5f;
+        //maxSpeed = 0.2f;
+        //minSpeed = 0.001f;
     }
 
     // accelerate in the direction of forward velocity
-    public void accelerateForward(float inc){ 
-        //Debug.Log("Accelerating Forward");
-        acc = acc + forward * inc;
-        vel = vel + acc; // unit time
-
-        restrictSpeed();
-
-        pos = pos + vel; // unit time
-        if(vel.magnitude > 0.0001f){
-            forward = vel.normalized;
-        }
+    public void walkForward(){ 
+        acc += 0.01f;
+        move();
     }
 
-    public void accelerateRight(float inc){
+    public void turnRight(){
         // Since our plane is the XZ plane, we take the cross product of the forward direction with the up direction (0, 1, 0)
         // to get the right direction 
-        Vector3 right = Vector3.Cross(new Vector3(0f, 1f, 0f), forward).normalized;
-        acc = acc + right * inc;
-        vel = vel + acc;
-
-        restrictSpeed();
-
-        pos = pos + vel;
-        if(vel.magnitude > 0.0001f){
-            forward = vel.normalized;
-        }
+        forward = Quaternion.AngleAxis(1.0f, Vector3.up) * forward;
+        move();
     }
 
-    public void maintainSpeed(){
-        acc = new Vector3(0f, 0f, 0f);
-        pos = pos + vel;
-        if(vel.magnitude > 0.0001f){
-            forward = vel.normalized;
+    public void turnLeft(){
+        // Since our plane is the XZ plane, we take the cross product of the forward direction with the up direction (0, 1, 0)
+        // to get the right direction 
+        forward = Quaternion.AngleAxis(-1.0f, Vector3.up) * forward;
+        move();
+    }
+
+    public void Brake(){
+        acc -= 0.01f;
+        move();
+    }
+
+    public void move(){
+        speed = speed + acc;
+        
+        if(speed < 0.0f){
+            acc = 0.0f;
+            speed = 0.0f;
         }
+
+        if(speed > maxSpeed){
+            speed = maxSpeed;
+        }
+
+        //Debug.Log("Accelerating Forward");
+        pos = pos + forward * speed; // unit time
     }
 
     public bool targetReached(){

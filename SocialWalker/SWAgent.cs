@@ -13,7 +13,7 @@ public class SWAgent : Agent {
     const float rewardTargetReached = 1.0f;
     const float rewardCollision = -1.0f;
     const float rewardOutOfBounds = -1.0f; 
-    const float orientationGainedWeight= 0.02f;
+    const float orientationGainedWeight= 0.03f;
     const float distanceGainedWeight = 0.05f;
     const float rewardEachStep = -0.01f;
     const int obsSpaceSize = 10;
@@ -103,27 +103,23 @@ public class SWAgent : Agent {
         {
             int action = (int)act[0];
             //Debug.Log(action);
-            if (action == 0) // accelerate forward
+            if (action == 0) // walk forward
             {
-                agent_.accelerateForward(0.001f);
+                agent_.walkForward();
             }
-            if (action == 1) // accelerate backward
+            if (action == 1) // turn right
             {
-                agent_.accelerateForward(-0.001f);
+                agent_.turnRight();
             }
-            else if (action == 2) // accelerate right
+            else if (action == 2) // turn left
             {
-                agent_.accelerateRight(0.001f);
+                agent_.turnLeft();
             }
-            else if (action == 3) // accelerate left
+            else if (action == 3) // stop
             {
-                agent_.accelerateRight(-0.001f);
+                agent_.Brake();
             }
-            else if (action == 4)
-            {
-                agent_.maintainSpeed();
-            }
-
+            
             gameObject.transform.position = agent_.pos;
             gameObject.transform.forward = agent_.forward;
 
